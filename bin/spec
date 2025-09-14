@@ -1,0 +1,13 @@
+#!/bin/bash
+
+mkdir -p exe
+
+gcc src/spec.c -std=c2x         \
+  -Wall -Werror                 \
+  -g3 -o exe/spec               &&
+valgrind                        \
+  --track-origins=yes           \
+  --leak-check=full             \
+  --show-leak-kinds=all         \
+  exe/spec
+echo
