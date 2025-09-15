@@ -1,3 +1,8 @@
+#include "print.h"
+#include "spec.h"
+#include "spec/print_stream.c"
+
+/*
 struct example1 {
   int a;
   float b;
@@ -8,7 +13,6 @@ struct example2 {
   bool d;
 };
 
-#include "print.h"
 
 void print_struct_example1 (
     void* stream,
@@ -30,18 +34,28 @@ void print_struct_example2 (
 #define print_custom(value)                                 \
   struct example1: print_arg(value, print_struct_example1), \
   struct example2: print_arg(value, print_struct_example2)
+*/
+
 
 int main (
     int argc,
     char** argv
 )
 {
+  /*
   int number = 0;
   print("my number is: ", f(number), ", but others would have said: ", f((int) { 42 }));
 
   struct example1 e1 = { 8, 1.1 };
   struct example2 e2 = { "zzz", true };
   print("example1: ", f(e1), ", example2: ", f(e2));
+  */
+  spec_add( print_stream );
 
-  return 0;
+  specs_run();
+
+  if (specs_passed)
+    return EXIT_SUCCESS;
+  else
+    return EXIT_FAILURE;
 }

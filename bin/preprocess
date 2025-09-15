@@ -6,10 +6,4 @@ mkdir -p exe
 # `fdopen` function.
 gcc src/spec.c -std=gnu2x       \
   -Wall -Werror                 \
-  -g3 -o exe/spec               &&
-valgrind                        \
-  --track-origins=yes           \
-  --leak-check=full             \
-  --show-leak-kinds=all         \
-  exe/spec
-echo
+  -E > exe/spec.c

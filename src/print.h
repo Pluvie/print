@@ -10,6 +10,27 @@
 #include <stdio.h>
 
 /*
+  By default, the stream where `print` and `printl` macros operate is stderr.
+  This can be changed by defining the PRINT_STREAM_DEFAULT before including the
+  print.h header.
+*/
+#ifndef PRINT_STREAM_DEFAULT
+#define PRINT_STREAM_DEFAULT stderr
+#endif
+
+/*
+  Defines some colors for printing on the tty.
+*/
+#define PRINT_COLOR_BLUE      "\x1b[34m"
+#define PRINT_COLOR_CYAN      "\x1b[36m"
+#define PRINT_COLOR_GREEN     "\x1b[32m"
+#define PRINT_COLOR_GREY      "\e[38;5;250m"
+#define PRINT_COLOR_MAGENTA   "\x1b[35m"
+#define PRINT_COLOR_NONE      "\x1b[0m"
+#define PRINT_COLOR_RED       "\x1b[31m"
+#define PRINT_COLOR_YELLOW    "\x1b[33m"
+
+/*
   This struct contains the print argument metadata.
 
   `flag` is always set to 0: it is used by the `print_stream` function to distinguish
@@ -34,11 +55,10 @@ struct print_arg {
   &(struct print_arg) { 0, &(value), (void (*)(void*, const void*)) functor }
 
 /*
-  This macro is used to define custom print types. By default, it points to a
-  meaningless string.
+  This macro is used to define custom print types. By default, it points to nothing.
 */
 #define print_custom(value) \
-  default: "{no custom print defined for `" #value "`}"
+  default: nullptr
 
 #define print_selector(value)                 \
   bool:       print_arg(value, print_bool),   \
@@ -61,6 +81,19 @@ struct print_arg {
 */
 #define f(value) \
   _Generic((value), print_selector(value))
+
+/*
+  This macro prints sequentially its arguments over the default print stream.
+*/
+#define printl(...) \
+  print_stream(PRINT_STREAM_DEFAULT __VA_OPT__(, __VA_ARGS__), nullptr)
+
+/*
+  This macro prints sequentially its arguments over the default print stream.
+  It also appends a new line at the end.
+*/
+#define print(...) \
+  print_stream(PRINT_STREAM_DEFAULT __VA_OPT__(, __VA_ARGS__), "\n", nullptr)
 
 /*
   This function prints on the given `stream` looping over the variadic arguments. These
@@ -266,24 +299,45 @@ void print_void_p (
 }
 
 /*
-  By default, the stream where `print` and `printl` macros operate is stderr.
-  This can be changed by defining the PRINT_STREAM_DEFAULT before including the
-  print.h header.
+  Utility function to dump a pointer value in a hex/ascii format.
 */
-#ifndef PRINT_STREAM_DEFAULT
-#define PRINT_STREAM_DEFAULT stderr
-#endif
+void print_hex (
+    const void* pointer,
+    size_t length
+)
+{
+  const uint8_t* data = pointer;
 
-/*
-  This macro prints sequentially its arguments over the default print stream.
-*/
-#define printl(...) \
-  print_stream(PRINT_STREAM_DEFAULT __VA_OPT__(, __VA_ARGS__), nullptr)
+  size_t line_length = 8;
+  size_t groups = length / line_length;
 
-/*
-  This macro prints sequentially its arguments over the default print stream.
-  It also appends a new line at the end.
-*/
-#define print(...) \
-  print_stream(PRINT_STREAM_DEFAULT __VA_OPT__(, __VA_ARGS__), "\n", nullptr)
+  if (length % line_length > 0)
+    groups++;
 
+  for (size_t group = 0; group < groups; group++) {
+    fprintf(PRINT_STREAM_DEFAULT, "| ");
+    for (size_t index = group * line_length;
+        index < (group * line_length) + line_length;
+        index++) {
+      if (index >= length) {
+        fprintf(PRINT_STREAM_DEFAULT, "   ");
+        continue;
+      }
+      fprintf(PRINT_STREAM_DEFAULT, "%02x ", *data);
+    }
+    fprintf(PRINT_STREAM_DEFAULT, "| ");
+    for (size_t index = group * line_length;
+        index < (group * line_length) + line_length;
+        index++) {
+      if (index >= length) {
+        fprintf(PRINT_STREAM_DEFAULT, "  ");
+        continue;
+      }
+      if (*data <= 31)
+        fprintf(PRINT_STREAM_DEFAULT, "_ ");
+      else
+        fprintf(PRINT_STREAM_DEFAULT, "%c ", *data);
+    }
+    fprintf(PRINT_STREAM_DEFAULT, "|\n");
+  }
+}
