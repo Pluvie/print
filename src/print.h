@@ -45,14 +45,14 @@
 struct print_arg {
   const char flag;
   const void* value;
-  int (*functor)(void*, int, const void*);
+  int32_t (*functor)(void*, int32_t, const void*);
 };
 
 /*
   This macro builds a `struct print_arg*` using the provided value and functor.
 */
 #define print_arg(value, functor) \
-  &(struct print_arg) { 0, &(value), (int (*)(void*, int, const void*)) functor }
+  &(struct print_arg) { 0, &value, (int32_t (*)(void*, int32_t, const void*)) functor }
 
 /*
   This macro is used to define custom print types. By default, it points to nothing.
@@ -184,9 +184,9 @@ void print_hex (
 
   When the variadic arg is `nullptr` the function terminates.
 */
-int print_variadic (
+int32_t print_variadic (
     void* output,
-    int length,
+    int32_t length,
     ...
 )
 {
@@ -195,14 +195,14 @@ int print_variadic (
 
   struct print_arg* arg = nullptr;
   bool printing_on_string = length >= 0;
-  int total_printed_bytes = 0;
+  int32_t total_printed_bytes = 0;
 
   do {
     arg = va_arg(args, struct print_arg*);
     if (arg == nullptr)
       break;
 
-    int printed_bytes = 0;
+    int32_t printed_bytes = 0;
 
     if (arg->flag != 0)
       printed_bytes = print_dispatch(output, length, "%s", (const char*) arg);
@@ -231,9 +231,9 @@ int print_variadic (
   The printed value is a string, which is "true" if the boolean is true, or "false"
   otherwise.
 */
-static int print_bool (
+static int32_t print_bool (
     void* output,
-    int length,
+    int32_t length,
     const bool* value
 )
 {
@@ -246,9 +246,9 @@ static int print_bool (
   of the value. Otherwise, since ASCII chars lower than 32 are non-printable, prints
   the numeric value prefixed with "\".
 */
-static int print_int8 (
+static int32_t print_int8 (
     void* output,
-    int length,
+    int32_t length,
     const int8_t* value
 )
 {
@@ -261,9 +261,9 @@ static int print_int8 (
 /*
   Prints an `uint8_t`.
 */
-static int print_uint8 (
+static int32_t print_uint8 (
     void* output,
-    int length,
+    int32_t length,
     const uint8_t* value
 )
 {
@@ -273,9 +273,9 @@ static int print_uint8 (
 /*
   Prints an `int16_t`.
 */
-static int print_int16 (
+static int32_t print_int16 (
     void* output,
-    int length,
+    int32_t length,
     const int16_t* value
 )
 {
@@ -285,9 +285,9 @@ static int print_int16 (
 /*
   Prints an `uint16_t`.
 */
-static int print_uint16 (
+static int32_t print_uint16 (
     void* output,
-    int length,
+    int32_t length,
     const uint16_t* value
 )
 {
@@ -297,9 +297,9 @@ static int print_uint16 (
 /*
   Prints an `int32_t`.
 */
-static int print_int32 (
+static int32_t print_int32 (
     void* output,
-    int length,
+    int32_t length,
     const int32_t* value
 )
 {
@@ -309,9 +309,9 @@ static int print_int32 (
 /*
   Prints an `uint32_t`.
 */
-static int print_uint32 (
+static int32_t print_uint32 (
     void* output,
-    int length,
+    int32_t length,
     const uint32_t* value
 )
 {
@@ -321,9 +321,9 @@ static int print_uint32 (
 /*
   Prints an `int64_t`.
 */
-static int print_int64 (
+static int32_t print_int64 (
     void* output,
-    int length,
+    int32_t length,
     const int64_t* value
 )
 {
@@ -333,9 +333,9 @@ static int print_int64 (
 /*
   Prints an `uint64_t`.
 */
-static int print_uint64 (
+static int32_t print_uint64 (
     void* output,
-    int length,
+    int32_t length,
     const uint64_t* value
 )
 {
@@ -345,9 +345,9 @@ static int print_uint64 (
 /*
   Prints a `float`.
 */
-static int print_float (
+static int32_t print_float (
     void* output,
-    int length,
+    int32_t length,
     const float* value
 )
 {
@@ -357,9 +357,9 @@ static int print_float (
 /*
   Prints a `double`.
 */
-static int print_double (
+static int32_t print_double (
     void* output,
-    int length,
+    int32_t length,
     const double* value
 )
 {
@@ -370,9 +370,9 @@ static int print_double (
   Prints a `char*`.
   The function adds a '"' at the begining and at the end of the string.
 */
-static int print_char_p (
+static int32_t print_char_p (
     void* output,
-    int length,
+    int32_t length,
     const char** value
 )
 {
@@ -382,9 +382,9 @@ static int print_char_p (
 /*
   Prints a `void*` as numeric address.
 */
-static int print_void_p (
+static int32_t print_void_p (
     void* output,
-    int length,
+    int32_t length,
     const void** value
 )
 {
