@@ -15,7 +15,7 @@
   print.h header.
 */
 #ifndef PRINT_STREAM_DEFAULT
-#define PRINT_STREAM_DEFAULT stderr
+#define PRINT_STREAM_DEFAULT  stderr
 #endif
 
 /*
@@ -33,7 +33,7 @@
 /*
   This struct contains the print argument metadata.
 
-  `flag` is always set to 0: it is used by the `print_stream` function to distinguish
+  `flag` is always set to 0: it is used by the `print_variadic` function to distinguish
   when an argument is a `const char*` or a `struct print_arg*`.
 
   `value` is a pointer to the actual value to be printed.
@@ -45,20 +45,26 @@
 struct print_arg {
   const char flag;
   const void* value;
-  void (*functor)(void*, const void*);
+  int (*functor)(void*, int, const void*);
 };
 
 /*
   This macro builds a `struct print_arg*` using the provided value and functor.
 */
 #define print_arg(value, functor) \
-  &(struct print_arg) { 0, &(value), (void (*)(void*, const void*)) functor }
+  &(struct print_arg) { 0, &(value), (int (*)(void*, int, const void*)) functor }
 
 /*
   This macro is used to define custom print types. By default, it points to nothing.
 */
 #define print_custom(value) \
   default: nullptr
+
+/*
+  This macro selects the correct print function depending on the type of `value`.
+*/
+#define f(value) \
+  _Generic((value), print_selector(value))
 
 #define print_selector(value)                 \
   bool:       print_arg(value, print_bool),   \
@@ -77,226 +83,36 @@ struct print_arg {
   print_custom(value)
 
 /*
-  This macro selects the correct print function depending on the type of `value`.
-*/
-#define f(value) \
-  _Generic((value), print_selector(value))
-
-/*
   This macro prints sequentially its arguments over the default print stream.
 */
-#define printl(...) \
-  print_stream(PRINT_STREAM_DEFAULT __VA_OPT__(, __VA_ARGS__), nullptr)
+#define print(...) \
+  print_variadic(PRINT_STREAM_DEFAULT, -1 __VA_OPT__(, __VA_ARGS__), nullptr)
 
 /*
   This macro prints sequentially its arguments over the default print stream.
   It also appends a new line at the end.
 */
-#define print(...) \
-  print_stream(PRINT_STREAM_DEFAULT __VA_OPT__(, __VA_ARGS__), "\n", nullptr)
+#define printl(...) \
+  print_variadic(PRINT_STREAM_DEFAULT, -1 __VA_OPT__(, __VA_ARGS__), "\n", nullptr)
 
 /*
-  This function prints on the given `stream` looping over the variadic arguments. These
-  arguments can be of two types:
-
-    - `const char*`: when the user specifies a string literal. 
-    - `struct print_arg*`: when the user calls the `f` macro on a value.
-
-  Since in C there is no way to determine the type of a variadic argument, this function
-  resorts to the following trick: the variadic arg is treated like a `struct print_arg*`
-  by default.
-
-  Then, the `flag` field is checked, which corresponds to the first byte of the struct.
-  If this byte is 0, the function assumes that the variadic arg is indeed a
-  `struct print_arg*`, because they are built on purpose with the first byte always
-  set to 0 using the `print_arg` macro. In this case, the `functor` field of this struct
-  is called, which shall handle the appropriate printing of the value.
-
-  On the other hand, if the variadic arg was instead a `const char*`, the `arg->flag`
-  check points to the first byte of the string. It is highly unlikely that the first
-  byte of the string is 0, as it would mean that the user asked to print an empty
-  string.  Of course this could always happen, and this is the only real limitation of
-  this library. Still, there is no reason to print an empty string -- as it would
-  literally do nothing -- so this limitation is arguably not that relevant.
-
-  When the variadic arg is `nullptr` the function terminates.
+  This macro prints sequentially its arguments over the given string, up to the
+  given length.
 */
-void print_stream (
-    void* stream,
-    ...
-)
-{
-  va_list args;
-  va_start(args);
-
-  struct print_arg* arg = nullptr;
-
-  do {
-    arg = va_arg(args, struct print_arg*);
-    if (arg == nullptr)
-      break;
-
-    if (arg->flag != 0)
-      fprintf(stream, "%s", (const char*) arg);
-    else
-      arg->functor(stream, arg->value);
-
-  } while(arg != nullptr);
-
-  va_end(args);
-}
+#define sprint(string, length, ...) \
+  print_variadic(string, length __VA_OPT__(, __VA_ARGS__), nullptr)
 
 /*
-  Prints a boolean value.
-  The printed value is a string, which is "true" if the boolean is true, or "false"
-  otherwise.
+  This macro dispatches the print call depending on the `length` argument.
+  If `length` is less than 0, `output` is assumed to be a stream and the `fprintf`
+  function is called. Otherwise, `output` is assumed to be a string and the `snprintf`
+  function is called.
 */
-void print_bool (
-    void* stream,
-    const bool* value
-)
-{
-  fprintf(stream, "%s", *value ? "true" : "false");
-}
-
-/*
-  Prints an `int8_t`, which is actually a `char`.
-  If the numeric value is higher than 31, the function print the ASCII equivalent
-  of the value. Otherwise, since ASCII chars lower than 32 are non-printable, prints
-  the numeric value prefixed with "\".
-*/
-void print_int8 (
-    void* stream,
-    const int8_t* value
-)
-{
-  if (*value > 31)
-    fprintf(stream, "%c", *value);
-  else
-    fprintf(stream, "\\%d", *value);
-}
-
-/*
-  Prints an `uint8_t`.
-*/
-void print_uint8 (
-    void* stream,
-    const uint8_t* value
-)
-{
-  fprintf(stream, "%hhu", *value);
-}
-
-/*
-  Prints an `int16_t`.
-*/
-void print_int16 (
-    void* stream,
-    const int16_t* value
-)
-{
-  fprintf(stream, "%hd", *value);
-}
-
-/*
-  Prints an `uint16_t`.
-*/
-void print_uint16 (
-    void* stream,
-    const uint16_t* value
-)
-{
-  fprintf(stream, "%hu", *value);
-}
-
-/*
-  Prints an `int32_t`.
-*/
-void print_int32 (
-    void* stream,
-    const int32_t* value
-)
-{
-  fprintf(stream, "%d", *value);
-}
-
-/*
-  Prints an `uint32_t`.
-*/
-void print_uint32 (
-    void* stream,
-    const uint32_t* value
-)
-{
-  fprintf(stream, "%u", *value);
-}
-
-/*
-  Prints an `int64_t`.
-*/
-void print_int64 (
-    void* stream,
-    const int64_t* value
-)
-{
-  fprintf(stream, "%ld", *value);
-}
-
-/*
-  Prints an `uint64_t`.
-*/
-void print_uint64 (
-    void* stream,
-    const uint64_t* value
-)
-{
-  fprintf(stream, "%lu", *value);
-}
-
-/*
-  Prints a `float`.
-*/
-void print_float (
-    void* stream,
-    const float* value
-)
-{
-  fprintf(stream, "%f", *value);
-}
-
-/*
-  Prints a `double`.
-*/
-void print_double (
-    void* stream,
-    const double* value
-)
-{
-  fprintf(stream, "%f", *value);
-}
-
-/*
-  Prints a `char*`.
-  The function adds a '"' at the begining and at the end of the string.
-*/
-void print_char_p (
-    void* stream,
-    const char** value
-)
-{
-  fprintf(stream, "\"%s\"", *value);
-}
-
-/*
-  Prints a `void*` as numeric address.
-*/
-void print_void_p (
-    void* stream,
-    const void** value
-)
-{
-  fprintf(stream, "%p", *value);
-}
+#define print_dispatch(output, length, format, ...)             \
+  (length < 0 ?                                                 \
+    fprintf(output, format __VA_OPT__(, __VA_ARGS__)) :         \
+    snprintf(output, length, format  __VA_OPT__(, __VA_ARGS__)) \
+  )
 
 /*
   Utility function to dump a pointer value in a hex/ascii format.
@@ -323,7 +139,7 @@ void print_hex (
         fprintf(PRINT_STREAM_DEFAULT, "   ");
         continue;
       }
-      fprintf(PRINT_STREAM_DEFAULT, "%02x ", *data);
+      fprintf(PRINT_STREAM_DEFAULT, "%02x ", data[index]);
     }
     fprintf(PRINT_STREAM_DEFAULT, "| ");
     for (size_t index = group * line_length;
@@ -333,11 +149,244 @@ void print_hex (
         fprintf(PRINT_STREAM_DEFAULT, "  ");
         continue;
       }
-      if (*data <= 31)
+      if (data[index] <= 31)
         fprintf(PRINT_STREAM_DEFAULT, "_ ");
       else
-        fprintf(PRINT_STREAM_DEFAULT, "%c ", *data);
+        fprintf(PRINT_STREAM_DEFAULT, "%c ", data[index]);
     }
     fprintf(PRINT_STREAM_DEFAULT, "|\n");
   }
+}
+
+/*
+  This function prints on the given `output` looping over the variadic arguments. These
+  arguments can be of two types:
+
+    - `const char*`: when the user specifies a string literal. 
+    - `struct print_arg*`: when the user calls the `f` macro on a value.
+
+  Since in C there is no way to determine the type of a variadic argument, this function
+  resorts to the following trick: the variadic arg is treated like a `struct print_arg*`
+  by default.
+
+  Then, the `flag` field is checked, which corresponds to the first byte of the struct.
+  If this byte is 0, the function assumes that the variadic arg is indeed a
+  `struct print_arg*`, because they are built on purpose with the first byte always
+  set to 0 using the `print_arg` macro. In this case, the `functor` field of this struct
+  is called, which shall handle the appropriate printing of the value.
+
+  On the other hand, if the variadic arg was instead a `const char*`, the `arg->flag`
+  check points to the first byte of the string. It is highly unlikely that the first
+  byte of the string is 0, as it would mean that the user asked to print an empty
+  string.  Of course this could always happen, and this is the only real limitation of
+  this library. Still, there is no reason to print an empty string -- as it would
+  literally do nothing -- so this limitation is arguably not that relevant.
+
+  When the variadic arg is `nullptr` the function terminates.
+*/
+int print_variadic (
+    void* output,
+    int length,
+    ...
+)
+{
+  va_list args;
+  va_start(args);
+
+  struct print_arg* arg = nullptr;
+  bool printing_on_string = length >= 0;
+  int total_printed_bytes = 0;
+
+  do {
+    arg = va_arg(args, struct print_arg*);
+    if (arg == nullptr)
+      break;
+
+    int printed_bytes = 0;
+
+    if (arg->flag != 0)
+      printed_bytes = print_dispatch(output, length, "%s", (const char*) arg);
+    else
+      printed_bytes = arg->functor(output, length, arg->value);
+
+    total_printed_bytes += printed_bytes;
+    if (printing_on_string) {
+      output += printed_bytes;
+      length -= printed_bytes;
+      if (length < 0) length = 0;
+    }
+
+  } while(arg != nullptr);
+
+  va_end(args);
+
+  if (!printing_on_string)
+    fflush(output);
+
+  return total_printed_bytes;
+}
+
+/*
+  Prints a boolean value.
+  The printed value is a string, which is "true" if the boolean is true, or "false"
+  otherwise.
+*/
+static int print_bool (
+    void* output,
+    int length,
+    const bool* value
+)
+{
+  return print_dispatch(output, length, "%s", *value ? "true" : "false");
+}
+
+/*
+  Prints an `int8_t`, which is actually a `char`.
+  If the numeric value is higher than 31, the function print the ASCII equivalent
+  of the value. Otherwise, since ASCII chars lower than 32 are non-printable, prints
+  the numeric value prefixed with "\".
+*/
+static int print_int8 (
+    void* output,
+    int length,
+    const int8_t* value
+)
+{
+  if (*value > 31)
+    return print_dispatch(output, length, "%c", *value);
+  else
+    return print_dispatch(output, length, "\\%d", *value);
+}
+
+/*
+  Prints an `uint8_t`.
+*/
+static int print_uint8 (
+    void* output,
+    int length,
+    const uint8_t* value
+)
+{
+  return print_dispatch(output, length, "%hhu", *value);
+}
+
+/*
+  Prints an `int16_t`.
+*/
+static int print_int16 (
+    void* output,
+    int length,
+    const int16_t* value
+)
+{
+  return print_dispatch(output, length, "%hd", *value);
+}
+
+/*
+  Prints an `uint16_t`.
+*/
+static int print_uint16 (
+    void* output,
+    int length,
+    const uint16_t* value
+)
+{
+  return print_dispatch(output, length, "%hu", *value);
+}
+
+/*
+  Prints an `int32_t`.
+*/
+static int print_int32 (
+    void* output,
+    int length,
+    const int32_t* value
+)
+{
+  return print_dispatch(output, length, "%d", *value);
+}
+
+/*
+  Prints an `uint32_t`.
+*/
+static int print_uint32 (
+    void* output,
+    int length,
+    const uint32_t* value
+)
+{
+  return print_dispatch(output, length, "%u", *value);
+}
+
+/*
+  Prints an `int64_t`.
+*/
+static int print_int64 (
+    void* output,
+    int length,
+    const int64_t* value
+)
+{
+  return print_dispatch(output, length, "%ld", *value);
+}
+
+/*
+  Prints an `uint64_t`.
+*/
+static int print_uint64 (
+    void* output,
+    int length,
+    const uint64_t* value
+)
+{
+  return print_dispatch(output, length, "%lu", *value);
+}
+
+/*
+  Prints a `float`.
+*/
+static int print_float (
+    void* output,
+    int length,
+    const float* value
+)
+{
+  return print_dispatch(output, length, "%f", *value);
+}
+
+/*
+  Prints a `double`.
+*/
+static int print_double (
+    void* output,
+    int length,
+    const double* value
+)
+{
+  return print_dispatch(output, length, "%f", *value);
+}
+
+/*
+  Prints a `char*`.
+  The function adds a '"' at the begining and at the end of the string.
+*/
+static int print_char_p (
+    void* output,
+    int length,
+    const char** value
+)
+{
+  return print_dispatch(output, length, "\"%s\"", *value);
+}
+
+/*
+  Prints a `void*` as numeric address.
+*/
+static int print_void_p (
+    void* output,
+    int length,
+    const void** value
+)
+{
+  return print_dispatch(output, length, "%p", *value);
 }

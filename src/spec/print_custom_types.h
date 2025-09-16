@@ -9,18 +9,24 @@ struct example2 {
 };
 
 
-void print_struct_example1 (
-    void* stream,
+int print_struct_example1 (
+    void* output,
+    int length,
     struct example1* value
 )
 {
-  printl("{ a: ", f(value->a), ", b: ", f(value->b), " }");
+  return print_variadic(output, length,
+    "{ a: ", f(value->a), ", b: ", f(value->b), " }",
+    nullptr);
 }
 
-void print_struct_example2 (
-    void* stream,
+int print_struct_example2 (
+    void* output,
+    int length,
     struct example2* value
 )
 {
-  printl("{ c: ", f(value->c), ", d: ", f(value->d), " }");
+  return print_variadic(output, length,
+    "{ c: ", f(value->c), ", d: ", f(value->d), " }",
+    nullptr);
 }
