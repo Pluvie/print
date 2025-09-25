@@ -2,14 +2,14 @@
 
 mkdir -p exe
 
-# Using `gnu2x` instead of `c2x` standard for spec compilation in order to have the
-# `fdopen` function.
-gcc src/spec.c -std=gnu2x       \
-  -Wall -Werror                 \
-  -g3 -o exe/spec               &&
-valgrind                        \
-  --track-origins=yes           \
-  --leak-check=full             \
-  --show-leak-kinds=all         \
+# Using `gnu2x` instead of `c2x` standard for spec compilation in order to have
+# the `fmemopen` function.
+gcc src/spec.c -std=gnu2x   \
+  -Wall -Werror             \
+  -g3 -o exe/spec           &&
+valgrind                    \
+  --track-origins=yes       \
+  --leak-check=full         \
+  --show-leak-kinds=all     \
   exe/spec
 echo

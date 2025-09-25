@@ -1,9 +1,0 @@
-#!/bin/bash
-
-mkdir -p exe
-
-# Using `gnu2x` instead of `c2x` standard for spec compilation in order to have the
-# `fdopen` function.
-gcc src/spec.c -std=gnu2x       \
-  -Wall -Werror                 \
-  -E > exe/spec.c

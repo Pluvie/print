@@ -1,4 +1,5 @@
 #include "print.h"
+#include "print.c"
 #include "spec.h"
 #include "spec/print_variadic.c"
 #include "spec/print_custom_types.c"

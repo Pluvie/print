@@ -1,0 +1,10 @@
+#!/bin/bash
+
+mkdir -p exe
+
+gcc "src/print.c" -std=c2x  \
+  -Wall -Werror             \
+  -O3 -march=native         \
+  -include "src/print.h"    \
+  -shared -fPIC             \
+  -o exe/libprint.so

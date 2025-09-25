@@ -167,7 +167,7 @@ void specs_run (
     void
 )
 {
-  sstream = fdopen(fileno(stderr), "w");
+  sstream = stderr;
 
   if (focused_specs[0] == NULL) {
     stderr = fopen("/dev/null", "w");
